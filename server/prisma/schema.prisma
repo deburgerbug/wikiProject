@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum ArticleType {
+  CHARACTER
+  ORGANIZATION
+  LOCATION
+  PATHWAY
+  SEQUENCE
+  ITEM
+  ABILITY
+  CONCEPT
+  EVENT
+  DEITY
+  EPISODE
+  GENERIC
+}
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Community {
+  id          String  @id @default(uuid())
+  name        String
+  slug        String  @unique
+  description String?
+
+  users      User[]
+  articles   Article[]
+  categories Category[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id       String   @id @default(uuid())
+  email    String   @unique
+  username String   @unique
+  role     UserRole @default(USER)
+
+  createdArticles Article[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  communities Community[]
+}
+
+model Article {
+  id          String        @id @default(uuid())
+  communityId String
+  type        ArticleType
+  title       String
+  slug        String
+  status      ArticleStatus @default(DRAFT)
+
+  createdById String
+
+  publishedRevisionId String? @unique
+
+  community Community @relation(fields: [communityId], references: [id])
+  createdBy User      @relation(fields: [createdById], references: [id])
+
+  revisions         ArticleRevision[]
+  publishedRevision ArticleRevision?  @relation("PublishedRevision", fields: [publishedRevisionId], references: [id])
+
+  categories ArticleCategory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([communityId, slug])
+  @@index([communityId, status])
+  @@index([communityId, type, status])
+}
+
+model ArticleRevision {
+  id             String @id @default(uuid())
+  articleId      String
+  revisionNumber Int
+
+  title        String
+  summary      String?
+  bodyMarkdown String
+  infoboxData  Json
+
+  createdById   String
+  changeSummary String?
+
+  article Article @relation(fields: [articleId], references: [id])
+
+  publishedFor Article? @relation("PublishedRevision")
+
+  createdAt DateTime @default(now())
+
+  @@unique([articleId, revisionNumber])
+  @@index([articleId, revisionNumber])
+}
+
+model Category {
+  id          String  @id @default(uuid())
+  communityId String
+  name        String
+  slug        String
+  description String?
+
+  community Community @relation(fields: [communityId], references: [id])
+
+  articles ArticleCategory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([communityId, slug])
+}
+
+model ArticleCategory {
+  articleId  String
+  categoryId String
+
+  article  Article  @relation(fields: [articleId], references: [id])
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@id([articleId, categoryId])
+  @@index([categoryId, articleId])
+}
