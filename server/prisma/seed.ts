@@ -53,21 +53,56 @@ async function main() {
     },
   });
 
-  const revision = await prisma.articleRevision.create({
-    data: {
+  const revision = await prisma.articleRevision.upsert({
+    where:{
+      articleId_revisionNumber:{
+        articleId: article.id,
+        revisionNumber: 1,
+      },
+    },
+    update: {},
+    create: {
       articleId: article.id,
       revisionNumber: 1,
       title: "Klein Moretti",
-      summary: "A central character in Lord of Mysteries.",
-      bodyMarkdown: "# Klein Moretti\n\nInitial article content.",
+      summary: "A central character in Lord Of Mysteries.",
+      bodyMarkdown:"",
       infoboxData: {
         aliases: [],
       },
       createdById: admin.id,
-      changeSummary: "Initial article",
-    },
+      changeSummary: "Initial Article"
+    }
   });
 
+  const characterCategory = await prisma.category.upsert({
+    where: {
+      communityId_slug: {
+        communityId: community.id,
+        slug: "characters"
+      }
+    },
+    update: {},
+    create: {
+      communityId: community.id,
+      name: "Characters",
+      slug: "characters",
+      description: "Characters from Lord Of Mysteries.",
+    }
+  })
+  await prisma.articleCategory.upsert({
+    where:{
+      articleId_categoryId:{
+        articleId: article.id,
+        categoryId: characterCategory.id
+      },
+    },
+    update: {},
+    create:{
+      articleId: article.id,
+      categoryId: characterCategory.id
+    }
+  })
   await prisma.article.update({
     where: { id: article.id },
     data: {
